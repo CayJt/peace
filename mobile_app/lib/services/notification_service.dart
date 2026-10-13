@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -47,6 +48,13 @@ ReminderMessage composeReminder(ReadingHabit h, {DateTime? now}) {
 }
 
 class NotificationService {
+  @visibleForTesting
+  static bool? debugSupportsScheduling;
+
+  /// Scheduled notifications work on Android, iOS and macOS only.
+  static bool get supportsScheduling =>
+      debugSupportsScheduling ?? !(Platform.isLinux || Platform.isWindows);
+
   NotificationService([FlutterLocalNotificationsPlugin? plugin])
       : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
@@ -56,7 +64,7 @@ class NotificationService {
   Future<void> init() async {
     // Scheduled notifications are unsupported by the plugin on Linux/Windows, and the
     // Linux backend needs a D-Bus session (its async failure cannot be caught here).
-    if (Platform.isLinux || Platform.isWindows) return;
+    if (!supportsScheduling) return;
     tzdata.initializeTimeZones();
     try {
       tz.setLocalLocation(tz.getLocation((await FlutterTimezone.getLocalTimezone())));
@@ -66,6 +74,8 @@ class NotificationService {
     await _plugin.initialize(const InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
+          requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
+      macOS: DarwinInitializationSettings(
           requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
       linux: LinuxInitializationSettings(defaultActionName: 'Buka'),
     ));
@@ -91,7 +101,7 @@ class NotificationService {
   /// current (the OS cannot compute dynamic text by itself).
   Future<void> scheduleDaily({required int hour, required int minute, required ReadingHabit habit}) async {
     // zonedSchedule is not implemented by the plugin on Linux/Windows.
-    if (Platform.isLinux || Platform.isWindows) return;
+    if (!supportsScheduling) return;
     final msg = composeReminder(habit);
     await _plugin.zonedSchedule(
       _id,

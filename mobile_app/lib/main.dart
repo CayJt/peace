@@ -23,8 +23,9 @@ Future<void> main() async {
   final notifications = NotificationService();
   try {
     await notifications.init();
-  } on Exception {
-    // Notifications are optional (e.g. unsupported on some desktop setups).
+  } catch (_) {
+    // Notifications are optional. Plugin misconfiguration surfaces as an Error
+    // (ArgumentError), not an Exception, so catch both: it must never block startup.
   }
   runApp(QuranApp(
     deps: AppDeps(
