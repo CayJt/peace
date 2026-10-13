@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'database/desktop_init.dart';
 import 'database/quran_database.dart';
 import 'services/auth_service.dart';
 import 'services/mic_source.dart';
@@ -16,10 +17,15 @@ const _apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final db = await QuranDatabase.open();
+  // Desktop needs the FFI factory registered before any database is opened.
+  final db = await QuranDatabase.open(path: initDesktopDatabase());
   final api = QuranApiService();
   final notifications = NotificationService();
-  await notifications.init();
+  try {
+    await notifications.init();
+  } on Exception {
+    // Notifications are optional (e.g. unsupported on some desktop setups).
+  }
   runApp(QuranApp(
     deps: AppDeps(
       prefs: prefs,

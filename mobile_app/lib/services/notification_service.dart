@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -52,6 +54,9 @@ class NotificationService {
   static const _id = 1001;
 
   Future<void> init() async {
+    // Scheduled notifications are unsupported by the plugin on Linux/Windows, and the
+    // Linux backend needs a D-Bus session (its async failure cannot be caught here).
+    if (Platform.isLinux || Platform.isWindows) return;
     tzdata.initializeTimeZones();
     try {
       tz.setLocalLocation(tz.getLocation((await FlutterTimezone.getLocalTimezone())));
@@ -62,6 +67,7 @@ class NotificationService {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
           requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
+      linux: LinuxInitializationSettings(defaultActionName: 'Buka'),
     ));
   }
 
@@ -84,6 +90,8 @@ class NotificationService {
   /// Call again after each reading session / app start so the text stays
   /// current (the OS cannot compute dynamic text by itself).
   Future<void> scheduleDaily({required int hour, required int minute, required ReadingHabit habit}) async {
+    // zonedSchedule is not implemented by the plugin on Linux/Windows.
+    if (Platform.isLinux || Platform.isWindows) return;
     final msg = composeReminder(habit);
     await _plugin.zonedSchedule(
       _id,

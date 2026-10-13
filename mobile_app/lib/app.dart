@@ -58,7 +58,9 @@ class _QuranAppState extends State<QuranApp> {
   @override
   void initState() {
     super.initState();
-    widget.deps.auth.currentUser().then((u) {
+    // A secure-storage failure (e.g. no keyring on a desktop) must not block the app:
+    // treat it as signed out.
+    widget.deps.auth.currentUser().catchError((Object _) => null).then((u) {
       if (mounted) {
         setState(() {
           _user = u;

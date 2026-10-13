@@ -71,17 +71,30 @@ class AuthService {
     return user;
   }
 
-  Future<String?> get token => _storage.read(key: _kToken);
-
-  Future<AuthUser?> currentUser() async {
-    if (await token == null) return null;
-    final raw = await _storage.read(key: _kUser);
-    if (raw == null) return null;
-    final m = jsonDecode(raw);
-    return AuthUser(m['e'], m['n']);
+  /// Reads never throw: an unavailable keyring/keychain reads as "nothing stored".
+  Future<String?> _read(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } on Exception {
+      return null;
+    }
   }
 
-  Future<bool> get biometricEnabled async => await _storage.read(key: _kBiometric) == 'true';
+  Future<String?> get token => _read(_kToken);
+
+  Future<AuthUser?> currentUser() async {
+    try {
+      if (await token == null) return null;
+      final raw = await _read(_kUser);
+      if (raw == null) return null;
+      final m = jsonDecode(raw);
+      return AuthUser(m['e'], m['n']);
+    } on Exception {
+      return null; // unreadable/corrupt/unavailable storage => signed out
+    }
+  }
+
+  Future<bool> get biometricEnabled async => await _read(_kBiometric) == 'true';
 
   Future<bool> get biometricAvailable async {
     try {
