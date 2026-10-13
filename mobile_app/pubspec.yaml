@@ -24,12 +24,16 @@ dependencies:
   fl_chart: ^0.69.0
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
+  crypto: ^3.0.5
+  flutter_timezone: ^2.1.0
+  intl: any
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   bloc_test: ^9.1.7
   mocktail: ^1.0.4
+  sqflite_common_ffi: ^2.3.3
 
 flutter:
   uses-material-design: true
