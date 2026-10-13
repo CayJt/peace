@@ -1,0 +1,14 @@
+venv/
+.venv/
+**/__pycache__/
+*.pyc
+build/
+**/build/
+.dart_tool/
+.git/
+.env
+.env.*
+*.pem
+*.key
+*.jks
+secrets/

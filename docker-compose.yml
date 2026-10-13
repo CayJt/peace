@@ -1,0 +1,9 @@
+services:
+  backend:
+    build: ./backend_server
+    container_name: quran_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend_server:/app
+    restart: unless-stopped

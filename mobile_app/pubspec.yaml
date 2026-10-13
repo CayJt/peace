@@ -1,0 +1,35 @@
+name: quran_app
+description: Distraction-free Holy Quran app with real-time Tajweed assessment.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  web_socket_channel: ^3.0.1
+  http: ^1.2.2
+  just_audio: ^0.9.40
+  record: ^5.1.2
+  local_auth: ^2.3.0
+  google_fonts: ^6.2.1
+  fl_chart: ^0.69.0
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  bloc_test: ^9.1.7
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true

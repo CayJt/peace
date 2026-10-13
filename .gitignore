@@ -1,0 +1,43 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.g.dart
+*.freezed.dart
+android/.gradle/
+android/local.properties
+android/key.properties
+*.jks
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Docker / secrets
+.env
+.env.*
+secrets/
+*.pem
+*.key
+
+# Data
+*.db
+*.sqlite
+
+# IDEs / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
