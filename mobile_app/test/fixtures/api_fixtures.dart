@@ -48,3 +48,33 @@ final Map<String, dynamic> ikhlas1 = {
 };
 
 Map<String, dynamic> pageOf(List<Map<String, dynamic>> verses) => {'verses': verses};
+
+/// Long synthetic verse (stand-in for 2:255) to force multi-line wrapping.
+Map<String, dynamic> longVerse({String key = '2:255', int page = 42, int surah = 2}) {
+  const base = ['ٱللَّهُ', 'لَآ', 'إِلَٰهَ', 'إِلَّا', 'هُوَ', 'ٱلْحَىُّ', 'ٱلْقَيُّومُ'];
+  final words = [
+    for (var i = 0; i < 70; i++) _w(1000 + i, i + 1, base[i % base.length], 'kata$i'),
+    _end(2000, 71, 255),
+  ];
+  return {
+    'id': 255,
+    'verse_number': int.parse(key.split(':')[1]),
+    'verse_key': key,
+    'juz_number': 3,
+    'page_number': page,
+    'text_uthmani': [for (var i = 0; i < 70; i++) base[i % base.length]].join(' '),
+    'text_imlaei': [for (var i = 0; i < 70; i++) base[i % base.length]].join(' '),
+    'words': words,
+    'translations': [
+      {'resource_id': 33, 'text': 'Terjemahan panjang. ' * 15}
+    ],
+  };
+}
+
+/// Stand-in for 9:1 (At-Taubah: no basmalah banner).
+Map<String, dynamic> taubah1() => {
+      ...fatihah1,
+      'verse_key': '9:1',
+      'page_number': 187,
+      'juz_number': 10,
+    };

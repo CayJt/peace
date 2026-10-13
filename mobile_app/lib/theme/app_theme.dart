@@ -61,6 +61,9 @@ class AppRadius {
 class AppTheme {
   AppTheme._();
 
+  /// Tests (no network / no bundled fonts) set this to false to use plain TextStyles.
+  static bool useGoogleFonts = true;
+
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
 
@@ -121,7 +124,7 @@ class AppTheme {
       scaffoldBackgroundColor: bg,
       dividerColor: isLight ? AppColors.hairline : const Color(0x1FFFFFFF),
       cardColor: isLight ? AppColors.pulp : scheme.surfaceContainer,
-      textTheme: _text(base.textTheme, ink),
+      textTheme: useGoogleFonts ? _text(base.textTheme, ink) : base.textTheme.apply(bodyColor: ink, displayColor: ink),
       appBarTheme: AppBarTheme(
         backgroundColor: bg,
         foregroundColor: ink,
@@ -172,7 +175,9 @@ class AppTheme {
 
   /// Arabic verse (Amiri). Stitch: 26px/58px mobile, 32px/72px large.
   static TextStyle arabicVerse({bool large = false, Color? color}) =>
-      GoogleFonts.amiri(
+      !useGoogleFonts
+          ? TextStyle(fontSize: large ? 32 : 26, height: large ? 72 / 32 : 58 / 26, color: color)
+          : GoogleFonts.amiri(
         fontSize: large ? 32 : 26,
         height: large ? 72 / 32 : 58 / 26,
         fontWeight: FontWeight.w400,
@@ -181,7 +186,9 @@ class AppTheme {
 
   /// Surah banner / display Arabic. Stitch: 30px/64px mobile, 40px/84px large.
   static TextStyle arabicDisplay({bool large = false, Color? color}) =>
-      GoogleFonts.amiri(
+      !useGoogleFonts
+          ? TextStyle(fontSize: large ? 40 : 30, fontWeight: FontWeight.w700, color: color)
+          : GoogleFonts.amiri(
         fontSize: large ? 40 : 30,
         height: large ? 84 / 40 : 64 / 30,
         fontWeight: FontWeight.w700,

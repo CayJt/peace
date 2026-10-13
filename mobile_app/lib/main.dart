@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'theme/app_theme.dart';
+import 'app.dart';
+import 'database/quran_database.dart';
+import 'services/auth_service.dart';
+import 'services/mic_source.dart';
+import 'services/notification_service.dart';
+import 'services/quran_api_service.dart';
+import 'services/quran_chat_service.dart';
+import 'services/quran_sync_manager.dart';
 
-void main() => runApp(const QuranApp());
+/// `flutter run --dart-define=API_BASE=http://192.168.1.10:8000`
+const _apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:8000');
 
-class QuranApp extends StatelessWidget {
-  const QuranApp({super.key});
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Quran',
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        home: const Scaffold(body: Center(child: Text('Quran'))),
-      );
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final db = await QuranDatabase.open();
+  final api = QuranApiService();
+  final notifications = NotificationService();
+  await notifications.init();
+  runApp(QuranApp(
+    deps: AppDeps(
+      prefs: prefs,
+      db: db,
+      auth: AuthService(baseUrl: _apiBase),
+      sync: QuranSyncManager(api, db),
+      chat: QuranChatService(baseUrl: _apiBase),
+      mic: RecordMicSource(),
+      wsBase: _apiBase.replaceFirst(RegExp('^http'), 'ws'),
+      api: api,
+      notifications: notifications,
+    ),
+  ));
 }
