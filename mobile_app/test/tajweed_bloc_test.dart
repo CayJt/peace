@@ -66,6 +66,7 @@ void main() {
     expect(bloc.state.statusOf(1, 1), LetterStatus.needRetry);
     expect(bloc.state.statusOf(1, 2), LetterStatus.cursor);
     expect(bloc.state.liveAverage, closeTo(0.62, 1e-9));
+    await pumpEventQueue(times: 50); // let persistence finish before tearDown closes the db
   });
 
   test('cursor crosses into the next word', () async {
@@ -122,6 +123,15 @@ void main() {
     await pumpEventQueue();
     ch.incoming.add('not json');
     await pumpEventQueue();
+    expect(bloc.state.listening, isTrue);
+  });
+
+  test('READY records which engine the server is using', () async {
+    bloc.add(AssessmentStarted(verse));
+    await pumpEventQueue();
+    server({'event': 'READY', 'verse_key': '1:1', 'letters': 12, 'engine': 'energy'});
+    await pumpEventQueue();
+    expect(bloc.state.engine, 'energy');
     expect(bloc.state.listening, isTrue);
   });
 }

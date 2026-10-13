@@ -44,7 +44,10 @@ A production-ready, distraction-free Holy Quran app with real-time Tajweed speec
 
 ### 4.1 WebSocket `/ws/assess-tajweed/{verse_key}`
 - Client streams **16 kHz mono 16-bit PCM** frames.
-- Server pipeline: buffer → Whisper STT → alignment against the reference verse → per-phoneme/letter Tajweed evaluation.
+- Server pipeline: buffer → faster-whisper (Arabic, word timestamps) re-run every ~2 s on the growing buffer → Needleman-Wunsch alignment of heard words to the reference verse (Imlaei spelling) → per-letter score. A word is committed (letters emitted in verse order) once it is no longer the last word heard; `END` commits the rest, unrecited words scoring 0.
+- Score meaning: Whisper recognition confidence of the letter *as the expected letter*. It measures correct words/letters and clear articulation, **not** tajweed rules (madd length, ghunnah, ikhfa…). Rule-level grading needs a phoneme-level model and is future work.
+- Engine selection `TAJWEED_ENGINE=auto|whisper|energy`; `auto` falls back to a loudness-only engine if Whisper cannot load. The `READY` event carries `engine`, and the client warns when it is `energy`.
+- No `initial_prompt` with the expected verse (it would make Whisper echo the reference and inflate scores).
 - Server emits live events, e.g. `{"event":"LETTER_ASSESSED","verse_key":"1:1","index":3,"letter":"ب","score":0.92,"rule":"qalqalah"}`.
 - Final `VERSE_SUMMARY` event with aggregate score.
 

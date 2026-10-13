@@ -50,23 +50,24 @@ class AnthropicAnswerer:
 
 
 class WhisperTranscriber:
-    """Uses faster-whisper when installed (not in requirements; heavy)."""
-
-    def __init__(self, model_size: str = "small"):
-        self.model_size = model_size
-        self._model = None
+    """Chat speech-to-text via the shared faster-whisper model (language auto-detected)."""
 
     def transcribe(self, audio: bytes, filename: str) -> str:
-        try:
-            from faster_whisper import WhisperModel  # type: ignore
-        except ImportError as e:
-            raise LLMUnavailable("faster-whisper not installed") from e
-        import tempfile
+        import subprocess
 
-        if self._model is None:
-            self._model = WhisperModel(self.model_size)
-        with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1] or ".wav") as f:
-            f.write(audio)
-            f.flush()
-            segs, _ = self._model.transcribe(f.name)
-            return " ".join(s.text for s in segs).strip()
+        import numpy as np
+
+        from services.whisper_model import FasterWhisperTranscriber, SpeechUnavailable
+
+        try:
+            # ffmpeg decodes any container to 16 kHz mono float PCM
+            raw = subprocess.run(
+                ["ffmpeg", "-v", "error", "-i", "pipe:0", "-f", "s16le", "-ac", "1", "-ar", "16000", "pipe:1"],
+                input=audio, capture_output=True, check=True, timeout=60,
+            ).stdout
+            samples = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
+            return FasterWhisperTranscriber(language=None).transcribe_text(samples)
+        except SpeechUnavailable as e:
+            raise LLMUnavailable(str(e)) from e
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            raise LLMUnavailable(f"cannot decode audio: {e}") from e

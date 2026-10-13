@@ -183,8 +183,15 @@ class _MushafPageScreenState extends State<MushafPageScreen> with WidgetsBinding
     return Scaffold(
       body: SafeArea(
         child: BlocListener<TajweedAssessmentBloc, AssessmentState>(
-          listenWhen: (a, b) => a.listening && !b.listening && b.average != null,
+          listenWhen: (a, b) =>
+              (a.listening && !b.listening && b.average != null) ||
+              (a.engine != 'energy' && b.engine == 'energy'),
           listener: (context, s) {
+            if (s.engine == 'energy' && s.listening) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Pengenalan suara belum aktif di server: penilaian hanya berdasar volume')));
+              return;
+            }
             // verse finished: move on to the next verse while the mic is on
             if (context.read<ReaderSettingsCubit>().state.mic) {
               _verseIdx++;

@@ -19,3 +19,23 @@ def is_letter(ch: str) -> bool:
 
 def letters_of(word: str) -> list[str]:
     return [c for c in word if is_letter(c)]
+
+
+_CHAR_MAP = {
+    "ٱ": "ا", "أ": "ا", "إ": "ا", "آ": "ا",
+    "ى": "ي", "ئ": "ي", "ة": "ه", "ؤ": "و",
+}
+
+
+def norm_char(ch: str) -> str:
+    """Spelling-insensitive form of a base letter (alef/hamza/ya variants merged)."""
+    return _CHAR_MAP.get(ch, ch)
+
+
+def norm_letters(word: str) -> list[str]:
+    """Normalised base letters; index-aligned with `letters_of(word)`."""
+    return [norm_char(c) for c in letters_of(word)]
+
+
+def norm_word(word: str) -> str:
+    return "".join(norm_letters(word))

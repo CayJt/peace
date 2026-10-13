@@ -11,23 +11,27 @@ class VerseNotFound(Exception):
 class QuranComVerseProvider:
     def __init__(self, client: httpx.Client | None = None):
         self._client = client or httpx.Client(timeout=10)
-        self._cache: dict[str, list[str]] = {}
+        self._cache: dict[str, list[dict]] = {}
 
     def get_words(self, verse_key: str) -> list[str]:
-        """Return the verse's Uthmani words (ayah-number marker excluded)."""
+        """The verse's Uthmani words (ayah-number marker excluded)."""
+        return [w["uthmani"] for w in self.get_reference(verse_key)]
+
+    def get_reference(self, verse_key: str) -> list[dict]:
+        """Words as `{"uthmani", "imlaei"}` dicts, in order."""
         if verse_key in self._cache:
             return self._cache[verse_key]
         try:
             r = self._client.get(
                 f"{API}/verses/by_key/{verse_key}",
-                params={"words": "true", "word_fields": "text_uthmani"},
+                params={"words": "true", "word_fields": "text_uthmani,text_imlaei"},
             )
         except httpx.HTTPError as e:
             raise VerseNotFound(str(e)) from e
         if r.status_code != 200:
             raise VerseNotFound(verse_key)
         words = [
-            w["text_uthmani"]
+            {"uthmani": w["text_uthmani"], "imlaei": w.get("text_imlaei") or w["text_uthmani"]}
             for w in r.json()["verse"]["words"]
             if w.get("char_type_name") != "end"
         ]

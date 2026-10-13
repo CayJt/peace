@@ -50,6 +50,9 @@ class AssessmentState extends Equatable {
   final double? average;
   final String? error;
 
+  /// "whisper" or "energy" (loudness-only fallback), from the server's READY event.
+  final String? engine;
+
   const AssessmentState({
     this.verseKey,
     this.listening = false,
@@ -57,6 +60,7 @@ class AssessmentState extends Equatable {
     this.scores = const {},
     this.average,
     this.error,
+    this.engine,
   });
 
   static String key(int wordPosition, int letterIndex) => '$wordPosition:$letterIndex';
@@ -74,6 +78,7 @@ class AssessmentState extends Equatable {
     Map<String, double>? scores,
     double? average,
     String? error,
+    String? engine,
   }) =>
       AssessmentState(
         verseKey: verseKey ?? this.verseKey,
@@ -82,10 +87,11 @@ class AssessmentState extends Equatable {
         scores: scores ?? this.scores,
         average: average ?? this.average,
         error: error,
+        engine: engine ?? this.engine,
       );
 
   @override
-  List<Object?> get props => [verseKey, listening, letters, scores, average, error];
+  List<Object?> get props => [verseKey, listening, letters, scores, average, error, engine];
 }
 
 /// Streams mic PCM to the backend and turns LETTER_ASSESSED events into
@@ -160,10 +166,17 @@ class TajweedAssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
         if (verse != null) {
           final word = verse.words.where((x) => x.wordPosition == w);
           if (word.isNotEmpty && l < word.first.letters.length) {
-            await db.recordLetterScore(word.first.letters[l].phonemeCode, score);
-            await db.recordLetterAssessment(verse.verseKey, w, l, score);
+            try {
+              await db.recordLetterScore(word.first.letters[l].phonemeCode, score);
+              await db.recordLetterAssessment(verse.verseKey, w, l, score);
+            } on Exception {
+              // Persistence is best-effort: the database may already be closed
+              // (logout/dispose) while the last events drain.
+            }
           }
         }
+      case 'READY':
+        emit(state.copyWith(engine: m['engine'] as String?));
       case 'VERSE_SUMMARY':
         emit(state.copyWith(listening: false, average: (m['average_score'] as num).toDouble()));
       case 'ERROR':

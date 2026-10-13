@@ -1,9 +1,21 @@
 services:
   backend:
-    build: ./backend_server
+    build:
+      context: ./backend_server
+      args:
+        WITH_WHISPER: ${WITH_WHISPER:-0}
     container_name: quran_backend
     ports:
       - "8000:8000"
+    environment:
+      TAJWEED_ENGINE: ${TAJWEED_ENGINE:-auto}      # auto | whisper | energy
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}       # size name or path to a CTranslate2 model
+      WHISPER_CACHE: /models
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - ./backend_server:/app
+      - whisper_models:/models
     restart: unless-stopped
+
+volumes:
+  whisper_models:
