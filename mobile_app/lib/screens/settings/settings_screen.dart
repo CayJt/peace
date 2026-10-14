@@ -187,6 +187,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: const Icon(Icons.schedule),
               onTap: () => _pickTime(s),
             ),
+            if (kDebugMode)
+              ListTile(
+                key: const ValueKey('open-admin'),
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: const Text('Konsol Admin (debug)'),
+                onTap: () => Navigator.of(context).pushNamed('/admin'),
+              ),
             if (!kReleaseMode && widget.audit != null) ...[
               const Divider(),
               Text('QA (non-produksi)', style: t.textTheme.labelSmall),

@@ -13,6 +13,18 @@ Without Docker: `cd backend_server && pip install -r requirements.txt && uvicorn
 
 Score a real recording: `cd backend_server && python -m tools.assess_wav recitation.wav 1:1`.
 
+## Admin console
+Roles: `super_admin`, `editor`, `auditor`, `custom` + per-permission RBAC (`analytics.view`, `users.view`, `config.manage`,
+`chats.view`, `murajaah.view`, `feedback.manage`, `admins.manage`).
+
+- First start creates Super Admin `admin`. Password = `INITIAL_ADMIN_PASSWORD`, else a temporary one is **printed once** in the
+  backend log. Change it in the console. Set `ADMIN_JWT_SECRET` (>= 32 chars) so sessions survive restarts.
+- Web: `cd mobile_app && flutter run -d chrome -t lib/admin_main.dart --dart-define=API_BASE=http://localhost:8000`
+  Production: `flutter build web -t lib/admin_main.dart --no-web-resources-cdn --dart-define=API_BASE=https://api.example.com`
+  (add the console's origin to `CORS_ORIGINS`; localhost origins are allowed by default).
+- Mobile app: route `/admin` (debug builds show a Settings entry).
+- The reader app uploads heartbeats and scored murajaah session summaries (not audio) so the dashboard/leaderboard have data.
+
 ## App
 ```bash
 cd mobile_app

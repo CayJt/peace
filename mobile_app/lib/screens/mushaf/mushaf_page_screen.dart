@@ -24,6 +24,8 @@ class MushafPageScreen extends StatefulWidget {
     required this.onOpenHistory,
     required this.onOpenChat,
     required this.onOpenSettings,
+    this.onSessionRecorded,
+    this.onSendFeedback,
     this.initialPage = 1,
   });
 
@@ -31,6 +33,8 @@ class MushafPageScreen extends StatefulWidget {
   final QuranDatabase db;
   final MicSource mic;
   final VoidCallback onOpenHistory, onOpenChat, onOpenSettings;
+  final void Function(int page, int durationSec, int letters, double score)? onSessionRecorded;
+  final Future<String?> Function(String category, String message)? onSendFeedback;
   final int initialPage;
 
   @override
@@ -86,6 +90,8 @@ class _MushafPageScreenState extends State<MushafPageScreen> with WidgetsBinding
     final n = a.scores.length;
     if (_secondsOnPage >= 5 || n > 0) {
       await widget.db.recordReadingSession(_page, _secondsOnPage, n, a.liveAverage ?? 0);
+      // Only sessions with scored letters feed the admin leaderboard.
+      if (n > 0) widget.onSessionRecorded?.call(_page, _secondsOnPage, n, a.liveAverage ?? 0);
     }
     _secondsOnPage = 0;
   }
@@ -155,6 +161,16 @@ class _MushafPageScreenState extends State<MushafPageScreen> with WidgetsBinding
     }
   }
 
+  Future<void> _feedback() async {
+    final send = widget.onSendFeedback!;
+    final msg = await showDialog<(String, String)>(context: context, builder: (_) => const _FeedbackDialog());
+    if (msg == null || msg.$2.length < 3) return;
+    final err = await send(msg.$1, msg.$2);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Terima kasih atas masukan Anda')));
+    }
+  }
+
   void _openMenu() {
     showModalBottomSheet<void>(
       context: context,
@@ -163,6 +179,8 @@ class _MushafPageScreenState extends State<MushafPageScreen> with WidgetsBinding
           ListTile(leading: const Icon(Icons.insights_outlined), title: const Text('Riwayat'), onTap: () { Navigator.pop(c); widget.onOpenHistory(); }),
           ListTile(leading: const Icon(Icons.chat_bubble_outline), title: const Text('Tanya Al-Qur\'an'), onTap: () { Navigator.pop(c); widget.onOpenChat(); }),
           ListTile(leading: const Icon(Icons.settings_outlined), title: const Text('Pengaturan'), onTap: () { Navigator.pop(c); widget.onOpenSettings(); }),
+          if (widget.onSendFeedback != null)
+            ListTile(leading: const Icon(Icons.feedback_outlined), title: const Text('Kirim saran'), onTap: () { Navigator.pop(c); _feedback(); }),
         ]),
       ),
     );
@@ -269,4 +287,45 @@ class _MushafPageScreenState extends State<MushafPageScreen> with WidgetsBinding
       ),
     );
   }
+}
+
+/// Owns its controller so it is disposed only once the dialog route is gone.
+class _FeedbackDialog extends StatefulWidget {
+  const _FeedbackDialog();
+
+  @override
+  State<_FeedbackDialog> createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends State<_FeedbackDialog> {
+  final _ctrl = TextEditingController();
+  String _category = 'suggestion';
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Kirim saran'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          DropdownButtonFormField<String>(
+            initialValue: _category,
+            items: const [
+              DropdownMenuItem(value: 'suggestion', child: Text('Saran')),
+              DropdownMenuItem(value: 'bug', child: Text('Bug')),
+              DropdownMenuItem(value: 'content', child: Text('Konten')),
+              DropdownMenuItem(value: 'other', child: Text('Lainnya')),
+            ],
+            onChanged: (v) => setState(() => _category = v ?? _category),
+          ),
+          TextField(key: const ValueKey('feedback-text'), controller: _ctrl, maxLines: 4, maxLength: 2000, decoration: const InputDecoration(hintText: 'Tulis masukan Anda')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          FilledButton(key: const ValueKey('feedback-send'), onPressed: () => Navigator.pop(context, (_category, _ctrl.text.trim())), child: const Text('Kirim')),
+        ],
+      );
 }

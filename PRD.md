@@ -92,3 +92,20 @@ A production-ready, distraction-free Holy Quran app with real-time Tajweed speec
 - **FASE 1:** Docker, backend skeleton, Flutter workspace, CI.
 - **FASE 2:** Google Stitch inspection and mapping to `app_theme.dart`.
 - Later: Mushaf engine, auth, WebSocket assessment, chatbot, gamification, data-integrity suite.
+
+## 9. Admin Console (RBAC)
+
+- **Auth:** bcrypt password hashes, JWT bearer (8 h) bound to the password version, so a password reset or deactivation
+  revokes sessions immediately; permissions are re-read from the database on every request. Login is throttled
+  (5 failures / 15 min per IP+username). Seeder creates Super Admin `admin` on first start.
+- **RBAC:** roles `super_admin | editor | auditor | custom`; permissions `analytics.view`, `users.view`, `config.manage`,
+  `chats.view`, `murajaah.view`, `feedback.manage`, `admins.manage`. Guarded endpoints return 403 without the permission.
+  Delegated admins cannot mint super admins or grant rights they lack; the primary super admin cannot be deleted,
+  deactivated or demoted; the last active super admin always remains.
+- **Data:** `admin_users`, `admin_permissions`, `system_configs` (seed `quran_data_provider=quran.com`), `chat_logs`,
+  `user_feedbacks`; plus `user_heartbeats` and `murajaah_sessions` fed by the reader app.
+- **Provider switch:** the value persists and is exposed at `GET /api/v1/config/public`. Only the Quran.com adapter exists
+  server-side; selecting Kemenag is stored but data still comes from Quran.com until a Kemenag adapter is written.
+- **Privacy:** chat questions/answers are logged for audit; murajaah audio is never stored (scores only).
+- **UI:** six screens, responsive (Desktop >= 1024 sidebar, Tablet rail, Mobile drawer), three surfaces (Warm Paper,
+  OLED Charcoal, Pure White). Stitch has no admin screens yet; tokens come from the existing design system.

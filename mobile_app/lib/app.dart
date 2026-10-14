@@ -18,6 +18,9 @@ import 'services/notification_service.dart';
 import 'services/quran_api_service.dart';
 import 'services/quran_chat_service.dart';
 import 'services/quran_sync_manager.dart';
+import 'admin_app.dart';
+import 'services/admin_api_service.dart';
+import 'services/user_telemetry.dart';
 import 'theme/app_theme.dart';
 
 class AppDeps {
@@ -31,6 +34,8 @@ class AppDeps {
     required this.wsBase,
     this.api,
     this.notifications,
+    this.telemetry,
+    this.adminApi,
   });
   final SharedPreferences prefs;
   final QuranDatabase db;
@@ -41,6 +46,8 @@ class AppDeps {
   final String wsBase;
   final QuranApiService? api;
   final NotificationService? notifications;
+  final UserTelemetry? telemetry;
+  final AdminApiService? adminApi;
 }
 
 class QuranApp extends StatefulWidget {
@@ -66,6 +73,7 @@ class _QuranAppState extends State<QuranApp> {
           _user = u;
           _loading = false;
         });
+        if (u != null) widget.deps.telemetry?.start();
       }
     });
   }
@@ -87,10 +95,16 @@ class _QuranAppState extends State<QuranApp> {
           themeMode: s.themeMode,
           theme: s.paperWarm ? AppTheme.light() : AppTheme.light().copyWith(scaffoldBackgroundColor: Colors.white),
           darkTheme: AppTheme.dark(),
+          onGenerateRoute: (settings) => settings.name == '/admin' && d.adminApi != null
+              ? MaterialPageRoute(settings: settings, builder: (_) => AdminRoot(api: d.adminApi!, prefs: d.prefs))
+              : null,
           home: _loading
               ? const Scaffold(body: Center(child: CircularProgressIndicator()))
               : _user == null
-                  ? LoginScreen(auth: d.auth, onAuthenticated: (u) => setState(() => _user = u))
+                  ? LoginScreen(auth: d.auth, onAuthenticated: (u) {
+                      setState(() => _user = u);
+                      d.telemetry?.start();
+                    })
                   : Builder(builder: (ctx) => _home(ctx, _user!)),
         ),
       ),
@@ -112,6 +126,9 @@ class _QuranAppState extends State<QuranApp> {
       db: d.db,
       mic: d.mic,
       onOpenHistory: () => push(scoped(HistoryDashboardScreen(db: d.db))),
+      onSessionRecorded: (page, secs, letters, score) => d.telemetry?.uploadSession(
+          page: page, durationSec: secs, lettersEvaluated: letters, score: score, khatamCount: tracker.state.khatamCount),
+      onSendFeedback: d.telemetry == null ? null : (cat, msg) => d.telemetry!.sendFeedback(cat, msg),
       onOpenChat: () => push(QuranChatScreen(service: d.chat, mic: d.mic)),
       onOpenSettings: () => push(scoped(SettingsScreen(
         auth: d.auth,
@@ -120,6 +137,7 @@ class _QuranAppState extends State<QuranApp> {
         audit: d.api == null ? null : MushafAudit(d.api!, d.db),
         onLoggedOut: () {
           Navigator.of(context).popUntil((r) => r.isFirst);
+          d.telemetry?.stop();
           setState(() => _user = null);
         },
       ))),
