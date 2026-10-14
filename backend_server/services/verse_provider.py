@@ -13,6 +13,11 @@ class QuranComVerseProvider:
         self._client = client or httpx.Client(timeout=10)
         self._cache: dict[str, list[dict]] = {}
 
+    def clear_cache(self) -> int:
+        n = len(self._cache)
+        self._cache.clear()
+        return n
+
     def get_words(self, verse_key: str) -> list[str]:
         """The verse's Uthmani words (ayah-number marker excluded)."""
         return [w["uthmani"] for w in self.get_reference(verse_key)]

@@ -2,6 +2,10 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+import json
+
+from routes.auth import optional_user
+from services.db import db, now
 from services.guardrail import REFUSAL, extract_verse_keys, is_in_domain
 from services.llm import Answerer, AnthropicAnswerer, LLMUnavailable, Transcriber, WhisperTranscriber
 
@@ -42,12 +46,28 @@ def get_verse_lookup():
     return lookup
 
 
-def _respond(question: str, answerer: Answerer, lookup) -> dict:
+def _log(user_id: str, question: str, result: dict, guardrail: bool) -> None:
+    """Audit trail for the admin console. Never lets logging break a chat reply."""
+    try:
+        with db() as con:
+            con.execute(
+                "INSERT INTO chat_logs(user_id,question,answer,referenced_verses,is_guardrail_triggered,created_at) "
+                "VALUES(?,?,?,?,?,?)",
+                (user_id, question[:2000], result["answer"], json.dumps(result["referenced_verses"], ensure_ascii=False),
+                 int(guardrail), now()),
+            )
+    except Exception:
+        pass
+
+
+def _respond(question: str, answerer: Answerer, lookup, user_id: str = "anonymous") -> dict:
     question = question.strip()
     if not question:
         raise HTTPException(422, "empty question")
     if not is_in_domain(question):
-        return {"answer": REFUSAL, "referenced_verses": []}
+        out = {"answer": REFUSAL, "referenced_verses": []}
+        _log(user_id, question, out, True)
+        return out
     context = [v for k in extract_verse_keys(question) if (v := lookup(k))]
     try:
         out = answerer.answer(question, context)
@@ -59,7 +79,9 @@ def _respond(question: str, answerer: Answerer, lookup) -> dict:
         if k not in by_key and (v := lookup(k)):
             by_key[k] = v
     cited = [by_key[k] for k in out.get("verse_keys", []) if k in by_key]
-    return {"answer": out["answer"], "referenced_verses": cited}
+    result = {"answer": out["answer"], "referenced_verses": cited}
+    _log(user_id, question, result, False)
+    return result
 
 
 @router.post("/api/v1/quran-chat")
@@ -68,6 +90,7 @@ async def quran_chat(
     answerer: Answerer = Depends(get_answerer),
     transcriber: Transcriber = Depends(get_transcriber),
     lookup=Depends(get_verse_lookup),
+    user=Depends(optional_user),
 ):
     """JSON `{"text": ...}` or multipart with an `audio` file (transcribed by Whisper)."""
     question: str | None = None
@@ -88,4 +111,4 @@ async def quran_chat(
             raise HTTPException(422, "body must be JSON with a 'text' field") from e
     if not question:
         raise HTTPException(422, "provide text or audio")
-    return _respond(question, answerer, lookup)
+    return _respond(question, answerer, lookup, str(user["id"]) if user else "anonymous")

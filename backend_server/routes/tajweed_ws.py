@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from services import engine
+from services import activity, engine
 from services.verse_provider import VerseNotFound, get_verse_provider
 from services.whisper_model import SpeechUnavailable
 
@@ -26,6 +26,7 @@ async def assess_tajweed(ws: WebSocket, verse_key: str):
         return
 
     scores: list[float] = []
+    activity.active_ws += 1
     await ws.send_json({
         "event": "READY", "verse_key": verse_key, "letters": assessor.total, "engine": assessor.engine,
     })
@@ -66,3 +67,5 @@ async def assess_tajweed(ws: WebSocket, verse_key: str):
         await ws.close()
     except WebSocketDisconnect:
         return
+    finally:
+        activity.active_ws = max(0, activity.active_ws - 1)

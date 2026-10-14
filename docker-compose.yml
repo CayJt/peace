@@ -12,10 +12,16 @@ services:
       WHISPER_MODEL: ${WHISPER_MODEL:-small}       # size name or path to a CTranslate2 model
       WHISPER_CACHE: /models
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}   # else a temporary one is printed at first start
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-}               # >=32 chars; else random per start
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      QURAN_DB: /data/quran.db
     volumes:
       - ./backend_server:/app
       - whisper_models:/models
+      - quran_data:/data
     restart: unless-stopped
 
 volumes:
   whisper_models:
+  quran_data:
